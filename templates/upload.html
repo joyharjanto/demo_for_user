@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zeno AI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Zeno AI</h1>
+        <h3>Database Management for Creatives</h3>
+
+        <form id="uploadForm" enctype="multipart/form-data">
+            <input type="file" name="clips" multiple accept="video/*">
+            <button type="submit">Upload</button>
+        </form>
+        <script src="{{ url_for('static', filename='js/upload.js') }}"></script>
+    </div>
+    <div id="uploadStatus"></div>
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+
+</body>
+</html>

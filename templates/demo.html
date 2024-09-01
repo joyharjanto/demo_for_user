@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zeno AI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Zeno AI</h1>
+        <h3>Notion for Video Management</h3>
+        <div class="upload-your-clips">
+            <a href="{{ url_for('upload') }}" id="uploadClips" class="upload-button">Upload Your Clips</a>       
+        </div>
+        {% if not clips %}
+        Please upload your clips to start
+        {% else %}
+        <div class="search-container">
+            <input type="text" id="searchInput" placeholder="Search clips...">
+            <button id="searchButton">Search</button>
+        </div>
+        <div id="results">
+            {% for clip in clips %}
+            <div class="clip">
+                <h4>{{ clip['title'] }}</h4>
+                <video width="320" height="240" controls>
+                    <source src="{{ url_for('serve_video', filename=clip['filename']) }}" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+                <div class="tags">
+                    {% for tag in clip["tags"] %}
+                        <span class="tag">{{ tag }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+
+</body>
+</html>
