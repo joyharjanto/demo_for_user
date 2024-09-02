@@ -29,10 +29,14 @@
                             <source src="{{ url_for('serve_video', filename=clip['filename']) }}" type="video/x-m4v">
                             Your browser does not support the video tag.
                         </video>
+                        
                         <div class="tags">
                             {% for tag in clip["tags"] %}
                             <span class="tag">{{ tag }}</span>
                             {% endfor %}
+                        </div>
+                        <div class="button-container">
+                            <a href="{{ url_for('download_file', filename=clip['filename'], download_name=clip['title']) }}" class="download-button">Download</a>
                         </div>
                     </div>
                 </div>
