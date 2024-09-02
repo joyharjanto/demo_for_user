@@ -1,1 +1,7 @@
+myenv
+venv/
+env/
+myenv/
 .env
+*.venv
+.DS_STORE
