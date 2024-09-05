@@ -4,17 +4,84 @@ from openai import OpenAI
 import ast
 import json
 import sys
+import re
 from dotenv import load_dotenv
+import ffmpeg
+import json
+import re
+import subprocess
+import trying_geo
+
 load_dotenv()
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 tags_and_image_desc = {}
 
-
 def encode_image(image_path):
     with open(image_path, "rb") as image_file:
         return base64.b64encode(image_file.read()).decode("utf-8")
+
+def preprocess_json_content(content):
+    # Remove any asterisks
+    content = content.replace('*', '')
+    
+    # Replace single quotes with double quotes for JSON compatibility
+    content = content.replace("'", '"')
+    
+    # Remove unnecessary whitespace
+    content = re.sub(r'\s+', ' ', content.strip())
+    
+    # Handle cases where the entire string is not enclosed in curly braces
+    if not (content.startswith('{') and content.endswith('}')):
+        match = re.search(r'\{.*\}', content)
+        if match:
+            content = match.group(0)
+    
+    # Balance square brackets
+    open_brackets = content.count('[')
+    close_brackets = content.count(']')
+    if open_brackets > close_brackets:
+        content = content + ']' * (open_brackets - close_brackets)
+    elif close_brackets > open_brackets:
+        content = '[' * (close_brackets - open_brackets) + content
+    
+    # Remove any trailing commas inside square brackets
+    content = re.sub(r',\s*]', ']', content)
+    
+    return content
+
+def parse_and_flatten_additional_words(content):
+    cleaned_content = preprocess_json_content(content)
+    
+    try:
+        data = json.loads(cleaned_content)
+        additional_words = data.get('additional_words', [])
+        
+        if isinstance(additional_words, list):
+            flattened_words = []
+            for item in additional_words:
+                if isinstance(item, str):
+                    flattened_words.append(item)
+                elif isinstance(item, dict):
+                    flattened_words.extend(item.keys())
+                    for value in item.values():
+                        if isinstance(value, list):
+                            flattened_words.extend(value)
+                        elif isinstance(value, str):
+                            flattened_words.append(value)
+        else:
+            flattened_words = [additional_words] if additional_words else []
+        
+        # Remove duplicates and strip whitespace
+        flattened_words = list(set(word.strip() for word in flattened_words if word.strip()))
+        
+        return flattened_words
+    except json.JSONDecodeError as e:
+        print(f"Error parsing JSON: {e}")
+        print(f"Problematic content: {cleaned_content}")
+        return []
+    
 
 
 def analyze_and_tag_image(image_path):
@@ -87,9 +154,7 @@ def generate_similar_words(video_dict):
                         2. Add 2-5 words that describe the mood or feeling of the tags and description fields, using a fourth grader's vocabulary.
                         3. Add words that describe the action in the picture. If the person is with their computer, then they are working. 
                         4. If the word is a verb, include its present continuous tense (e.g., swim -> swimming).
-                        5. If any of the word in steps 1-4 is a city like Seoul, then generate similar words like  Korea, South Korea as words. 
-                            Or if it is New York, then have New York City, USA, NYC as words
-                            But if there is no country or city in steps 1-4, then skip step 5
+                        5. If there is a word on the image, include it and generate similar words as well
                         Format the output as a JSON object. Do not use newlines or comments in the response:
                         {{"additional_words": [all generated words from steps 1, 2, 3, 4, 5]}}
                         Tags: {tags}
@@ -103,7 +168,11 @@ def generate_similar_words(video_dict):
         
         # Parse the JSON response
         try:
-            content_parsed = json.loads(content)
+            print('success: ', content)
+            content_process = preprocess_json_content(content)
+            content_parsed = json.loads(content_process)
+            content_extract = content_parsed.get("additional_words", [])
+            additional_tags = [word.strip() for word in content_extract]
         except json.JSONDecodeError:
             print(f"Error parsing response for {video_path}. Response: {content}")
             continue  # Skip this iteration if parsing fails
@@ -111,12 +180,20 @@ def generate_similar_words(video_dict):
         sample_dict = {
             "tags": tags,
             "description": description,
-            "additional_words": content_parsed.get("additional_words", []),
             "video_path": video_path,
             "thumbnail_path": data["result"]["video_link"],
         }
+        path = "/Users/joyharjanto/demo_for_user/data/split_scenes/" + video_path
+        geo_tags = trying_geo.main(path)
+
+
+        tags = additional_tags + geo_tags if geo_tags else additional_tags
+        sample_dict["additional_words"] = [tag for tag in tags if tag]
+
         results.append(sample_dict)
     return results
+
+
 
 # Use the function
 # thumbnails_folder = "/Users/joyharjanto/brollroll/data/thumbnails"  # Update this if your folder is elsewhere
